@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JD TVS Dashboard</title>
+    <meta http-equiv="refresh" content="0; url=login.html" />
+    <meta name="theme-color" content="#10251f" />
+    <meta name="description" content="Responsive JD TVS dashboard." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css?v=logo-3d-1" />
+    <style>
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <script>window.location.replace("login.html");</script>
+    <section id="loginView" class="login-view">
+      <div class="login-panel">
+        <div class="login-brand">
+          <span class="brand-logo"><img src="assets/jd-logo.jpeg" alt="JD Auto Sales logo" /></span>
+          <div>
+            <h1>JD TVS</h1>
+            <p>Secure Dashboard Login</p>
+          </div>
+        </div>
+
+        <form id="loginForm" class="login-form">
+          <label>Username <input id="loginUser" autocomplete="username" required placeholder="admin" /></label>
+          <label>Password <input id="loginPass" type="password" autocomplete="current-password" required placeholder="1234" /></label>
+          <button type="submit" class="primary-btn">Login</button>
+          <p id="loginError" class="login-error" hidden>Invalid username or password.</p>
+        </form>
+
+        <p class="login-hint">Demo login: admin / 1234</p>
+      </div>
+      <footer class="login-footer">Copyright © <span data-current-year></span> Rohit Singh</footer>
+    </section>
+
+    <aside class="sidebar app-shell" hidden>
+      <div class="brand">
+        <span class="brand-logo"><img src="assets/jd-logo.jpeg" alt="JD Auto Sales logo" /></span>
+        <div>
+          <h1>JD TVS</h1>
+          <p>Dashboard</p>
+        </div>
+      </div>
+
+      <nav class="menu" aria-label="Dashboard menu">
+        <button class="menu-item active" data-view="dashboardView">Dashboard</button>
+        <a class="menu-item" href="sale.html">Sales</a>
+        <a class="menu-item" href="rto-insurance.html">RTO</a>
+        <a class="menu-item" href="rto-insurance.html">Insurance</a>
+        <a class="menu-item" href="parts.html">Parts</a>
+        <a class="menu-item" href="customer.html">Pending Balance</a>
+        <a class="menu-item" href="lists.html">Lists</a>
+        <a class="menu-item" href="admin.html">Admin</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard app-shell" hidden>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Business Overview</p>
+          <h2 id="pageTitle">Dashboard</h2>
+          <p class="welcome-name">Welcome, <strong>Admin</strong></p>
+        </div>
+        <div class="top-actions">
+          <button id="menuToggle" class="soft-btn" type="button">Menu</button>
+          <button id="installApp" class="soft-btn" hidden>Install</button>
+          <button class="soft-btn">Today</button>
+          <button id="logoutBtn" class="soft-btn">Logout</button>
+          <a class="primary-btn" href="sale.html">New Sale</a>
+        </div>
+      </header>
+
+      <section class="stats-grid" aria-label="Summary totals">
+        <article class="stat-card">
+          <span>Total Sales</span>
+          <strong id="totalSales">Rs 0</strong>
+          <small id="salesCaption">No sales recorded yet</small>
+        </article>
+        <article class="stat-card">
+          <span>RTO Work</span>
+          <strong>Rs 0</strong>
+          <small>RTO records available in RTO page</small>
+        </article>
+        <article class="stat-card">
+          <span>Insurance</span>
+          <strong>Rs 0</strong>
+          <small>Policy records available in insurance page</small>
+        </article>
+        <article class="stat-card warning">
+          <span>Pending Balance</span>
+          <strong id="pendingBalance">Rs 0</strong>
+          <small>No customer dues</small>
+        </article>
+      </section>
+
+      <section id="dashboardView" class="view active">
+        <section class="content-grid">
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Quick Modules</p>
+                <h3>Business Sections</h3>
+              </div>
+            </div>
+            <div class="module-list">
+              <a class="module-row" href="sale.html"><span>Sales</span><small>Create sale bills and track payments</small></a>
+              <a class="module-row" href="rto-insurance.html"><span>RTO</span><small>Manage registration pending and completed work</small></a>
+              <a class="module-row" href="rto-insurance.html"><span>Insurance</span><small>Track policy company, expenses, and renewal reminder</small></a>
+              <a class="module-row" href="parts.html"><span>Parts</span><small>Manage stock, bulk import/export, sale, and low alert</small></a>
+              <a class="module-row" href="customer.html"><span>Pending Balance</span><small>View customer-wise dues in one place</small></a>
+              <a class="module-row" href="lists.html"><span>All Lists</span><small>Open bike, customer, sales, RTO, insurance, and parts lists section-wise</small></a>
+              <a class="module-row" href="admin.html"><span>Admin</span><small>Employee login and distributor details</small></a>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Status</p>
+                <h3>Today</h3>
+              </div>
+            </div>
+            <div class="status-list">
+              <div><span>Sales Bills</span><strong id="salesCount">0</strong></div>
+              <div><span>RTO Files</span><strong>0</strong></div>
+              <div><span>Policies</span><strong>0</strong></div>
+              <div><span>Low Stock Parts</span><strong>0</strong></div>
+            </div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Recent Work</p>
+                <h3>Activity</h3>
+              </div>
+            </div>
+            <div class="empty-state">
+              <strong id="activityTitle">No activity yet</strong>
+              <p id="activityText">Create your first sale entry to start tracking business activity.</p>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Customers</p>
+                <h3>Pending Summary</h3>
+              </div>
+            </div>
+            <div class="empty-state compact">
+              <strong id="pendingSummary">Rs 0</strong>
+              <p id="pendingCaption">No pending balance available.</p>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <section id="salesView" class="view">
+        <article class="panel">
+          <div class="panel-head split-head">
+            <div>
+              <p class="eyebrow">Sales Module</p>
+              <h3>Create Sale Entry</h3>
+            </div>
+            <button class="soft-btn" data-view="dashboardView">Back to Dashboard</button>
+          </div>
+          <form id="salesForm" class="entry-form">
+            <label>Customer Name <input id="customerName" required placeholder="Customer name" /></label>
+            <label>Mobile <input id="customerMobile" placeholder="Phone number" /></label>
+            <label>Bike Model <input id="bikeModel" placeholder="Bike model" /></label>
+            <label>Item / Service <input id="saleItem" required placeholder="Part or service name" /></label>
+            <label>Total Amount <input id="saleTotal" type="number" min="0" step="0.01" required /></label>
+            <label>Paid Amount <input id="salePaid" type="number" min="0" step="0.01" value="0" required /></label>
+            <label>Date <input id="saleDate" type="date" required /></label>
+            <button type="submit" class="primary-btn">Save Sale</button>
+          </form>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Sales Records</p>
+              <h3>Recent Sales</h3>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Mobile</th>
+                  <th>Bike</th>
+                  <th>Item</th>
+                  <th>Total</th>
+                  <th>Paid</th>
+                  <th>Pending</th>
+                </tr>
+              </thead>
+              <tbody id="salesRows"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+      <footer class="app-footer">Copyright © <span data-current-year></span> Rohit Singh</footer>
+    </main>
+
+    <script>document.querySelectorAll("[data-current-year]").forEach((item) => item.textContent = new Date().getFullYear());</script>
+    <script src="app.js?v=same-design-1"></script>
+  </body>
+</html>

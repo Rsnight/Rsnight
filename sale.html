@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JD TVS Sales</title>
+    <meta name="theme-color" content="#10251f" />
+    <meta name="description" content="JD TVS sales entry page." />
+    <link rel="stylesheet" href="styles.css?v=logo-3d-1" />
+    <style>
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-logo"><img src="assets/jd-logo.jpeg" alt="JD Auto Sales logo" /></span>
+        <div>
+          <h1>JD TVS</h1>
+          <p>Sales</p>
+        </div>
+      </div>
+
+      <nav class="menu" aria-label="Sales menu">
+        <a class="menu-item" href="index.html">Dashboard</a>
+        <a class="menu-item active" href="sale.html">Sales</a>
+        <a class="menu-item" href="rto-insurance.html">RTO</a>
+        <a class="menu-item" href="rto-insurance.html">Insurance</a>
+        <a class="menu-item" href="parts.html">Parts</a>
+        <a class="menu-item" href="customer.html">Pending Balance</a>
+        <a class="menu-item" href="lists.html">Lists</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Sales Module</p>
+          <h2>Sales</h2>
+          <p class="welcome-name">Welcome, <strong>Admin</strong></p>
+        </div>
+        <div class="top-actions">
+          <button id="menuToggle" class="soft-btn" type="button">Menu</button>
+          <a class="soft-btn" href="index.html">Dashboard</a>
+          <a class="soft-btn" href="rto-insurance.html">RTO / Insurance</a>
+          <a class="soft-btn" href="customer.html">Customers</a>
+          <a class="soft-btn" href="lists.html">Lists</a>
+          <div class="notification-menu">
+            <button id="notificationBell" class="soft-btn bell-btn" type="button" aria-label="Notifications">🔔 <span id="notificationCount">0</span></button>
+            <div id="notificationPanel" class="notification-panel" hidden></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="stats-grid" aria-label="Sales totals">
+        <article class="stat-card">
+          <span>Total Sales</span>
+          <strong id="salePageTotal">Rs 0</strong>
+          <small id="salePageCount">No sales recorded yet</small>
+        </article>
+        <article class="stat-card warning">
+          <span>Pending Balance</span>
+          <strong id="salePagePending">Rs 0</strong>
+          <small>Customer dues</small>
+        </article>
+        <article class="stat-card">
+          <span>Paid Amount</span>
+          <strong id="salePagePaid">Rs 0</strong>
+          <small>Received amount</small>
+        </article>
+        <article class="stat-card">
+          <span>Today Entries</span>
+          <strong id="salePageToday">0</strong>
+          <small>Sales bills today</small>
+        </article>
+      </section>
+
+      <section class="view active">
+        <div class="action-bar">
+          <button class="primary-btn" data-panel="saleFormPanel">Add Sale</button>
+          <button class="soft-btn" data-panel="bikeFormPanel">Add New Bike</button>
+          <button class="soft-btn" data-panel="salesListPanel">Sales List</button>
+          <button class="soft-btn" data-panel="bikeListPanel">Bike List</button>
+          <div class="search-group">
+            <input id="globalSearch" placeholder="Search sales or bikes..." />
+            <button id="voiceSearch" class="soft-btn" type="button">Voice Search</button>
+          </div>
+        </div>
+
+        <article id="bikeFormPanel" class="panel sales-panel">
+          <div class="panel-head split-head">
+            <div>
+              <p class="eyebrow">Bike Stock</p>
+              <h3>Add New Bike</h3>
+            </div>
+          </div>
+          <form id="bikeForm" class="entry-form">
+            <label>Bike Model
+              <select id="newBikeModel" required>
+                <option value="">Select bike model</option>
+                <option value="TVS Raider 125">TVS Raider 125</option>
+                <option value="TVS Apache RTR 160">TVS Apache RTR 160</option>
+                <option value="TVS Apache RTR 180">TVS Apache RTR 180</option>
+                <option value="TVS Apache RTR 200">TVS Apache RTR 200</option>
+                <option value="TVS Ronin">TVS Ronin</option>
+                <option value="TVS Sport">TVS Sport</option>
+                <option value="TVS Radeon">TVS Radeon</option>
+                <option value="TVS Star City Plus">TVS Star City Plus</option>
+                <option value="TVS Jupiter">TVS Jupiter</option>
+                <option value="TVS Ntorq">TVS Ntorq</option>
+                <option value="TVS Zest">TVS Zest</option>
+                <option value="TVS iQube">TVS iQube</option>
+                <option value="TVS XL100">TVS XL100</option>
+                <option value="__custom__">Custom / New Model</option>
+              </select>
+            </label>
+            <label id="customModelWrap" hidden>Custom Bike Model <input id="customBikeModel" placeholder="New launched model" /></label>
+            <label>Category <input id="newBikeCategory" readonly placeholder="Auto category" /></label>
+            <label id="customCategoryWrap" hidden>Custom Category <input id="customBikeCategory" placeholder="New category" /></label>
+            <label>Company <input id="newBikeCompany" value="TVS" readonly /></label>
+            <label>Frame No. <input id="newBikeFrame" required placeholder="MD625..." /></label>
+            <label>Engine No. <input id="newBikeEngine" required placeholder="AE8..." /></label>
+            <label>Key No. <input id="newBikeKey" placeholder="K-102" /></label>
+            <label>Colour <input id="newBikeColour" placeholder="Red / Black" /></label>
+            <button id="bikeSubmitBtn" type="submit" class="primary-btn">Add Bike</button>
+          </form>
+        </article>
+
+        <article id="saleFormPanel" class="panel sales-panel">
+          <div class="panel-head split-head">
+            <div>
+              <p class="eyebrow">Create Bill</p>
+              <h3>Sale Entry</h3>
+            </div>
+          </div>
+          <form id="salePageForm" class="entry-form">
+            <label>Customer Name <input id="customerName" required placeholder="Customer name" /></label>
+            <label>Father / Husband Name <input id="guardianName" required placeholder="Father or husband name" /></label>
+            <label>ID No. <input id="customerIdNo" placeholder="Aadhaar / ID number" /></label>
+            <label>Invoice / VN No. <input id="invoiceNo" placeholder="Invoice or VN number" /></label>
+            <label>Mobile <input id="customerMobile" placeholder="Phone number" /></label>
+            <label>Address <input id="customerAddress" placeholder="Customer address" /></label>
+            <label>Frame No. <input id="saleFrameNo" required placeholder="Type frame no." /></label>
+            <label>Engine No. <input id="saleEngineNo" required placeholder="Type engine no." /></label>
+            <label>Bike Model <input id="bikeModel" readonly placeholder="Auto fetch" /></label>
+            <label>Key No. <input id="saleKeyNo" readonly placeholder="Auto fetch" /></label>
+            <label>Colour <input id="saleColour" readonly placeholder="Auto fetch" /></label>
+            <label>Payment Type
+              <select id="paymentType" required>
+                <option value="Cash">Cash</option>
+                <option value="Finance">Finance</option>
+              </select>
+            </label>
+            <label id="totalAmountWrap" hidden>Total Amount <input id="saleTotal" type="number" min="0" step="0.01" /></label>
+            <label class="finance-field" hidden>Down Payment <input id="downPayment" type="number" min="0" step="0.01" value="0" /></label>
+            <label class="finance-field" hidden>EMI <input id="emiAmount" type="number" min="0" step="0.01" value="0" /></label>
+            <label class="finance-field" hidden>EMI Months <input id="emiMonths" type="number" min="1" step="1" value="12" /></label>
+            <label class="finance-field" hidden>Finance Company <input id="financeCompany" placeholder="Finance company name" /></label>
+            <label>Paid Amount <input id="salePaid" type="number" min="0" step="0.01" value="0" required /></label>
+            <label>Pending Amount <input id="salePending" type="number" min="0" step="0.01" value="0" required /></label>
+            <label>Date <input id="saleDate" type="date" required /></label>
+            <button id="saleSubmitBtn" type="submit" class="primary-btn">Save Sale</button>
+          </form>
+        </article>
+
+        <article id="salesListPanel" class="panel sales-panel active">
+          <div class="panel-head split-head">
+            <div>
+              <p class="eyebrow">Records</p>
+              <h3>Sales List</h3>
+            </div>
+            <input id="salesSearch" class="panel-search" placeholder="Search sales..." />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Father / Husband</th>
+                  <th>ID No.</th>
+                  <th>Invoice / VN</th>
+                  <th>Mobile</th>
+                  <th>Address</th>
+                  <th>Bike</th>
+                  <th>Frame No.</th>
+                  <th>Engine No.</th>
+                  <th>Key No.</th>
+                  <th>Colour</th>
+                  <th>Payment Type</th>
+                  <th>Total</th>
+                  <th>Down Payment</th>
+                  <th>EMI</th>
+                  <th>EMI Months</th>
+                  <th>Finance Company</th>
+                  <th>Paid</th>
+                  <th>Pending</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="salePageRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article id="bikeListPanel" class="panel sales-panel">
+          <div class="panel-head split-head">
+            <div>
+              <p class="eyebrow">Bike Records</p>
+              <h3>Added Bikes</h3>
+            </div>
+            <input id="bikeSearch" class="panel-search" placeholder="Search bikes..." />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Category</th>
+                  <th>Company</th>
+                  <th>Frame No.</th>
+                  <th>Engine No.</th>
+                  <th>Key No.</th>
+                  <th>Colour</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bikeRows"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <footer class="app-footer">Copyright © <span data-current-year></span> Rohit Singh</footer>
+    </main>
+
+    <script>document.querySelectorAll("[data-current-year]").forEach((item) => item.textContent = new Date().getFullYear());</script>
+    <script src="sale.js?v=same-design-1"></script>
+  </body>
+</html>
