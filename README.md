@@ -12,12 +12,6 @@ Pages:
 - `customer.html`
 - `parts.html`
 
-Demo logins:
-
-- Admin: `admin` / `1234`
-- Accounts: `accounts` / `1234`
-- Parts Manager: `parts` / `1234`
-
 Run locally:
 
 ```bash
