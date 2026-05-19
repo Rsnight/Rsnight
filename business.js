@@ -1,7 +1,7 @@
 const STORE_KEY = "jdTvsBusinessSuiteV1";
 const SESSION_KEY = "jdTvsCurrentUserV1";
 const THEME_KEY = "jdTvsThemeV1";
-const LOGO_PATH = "assets/jd-logo.jpeg";
+const LOGO_PATH = "jd-logo.jpeg";
 const TABLE_PAGE_SIZE = 25;
 const defaultTheme = {
   green: "#0f7668",
