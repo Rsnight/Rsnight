@@ -58,7 +58,7 @@ function bikeModelOptions() {
 }
 
 const pageAccess = {
-  "dashboard": ["admin", "accounts", "parts_manager", "sales", "rto"],
+  "dashboard": ["admin", "accounts", "parts_manager", "sales", "rto","mechanics"],
   "admin": ["admin"],
   "sales": ["admin", "accounts", "sales"],
   "rto": ["admin", "accounts", "rto", "sales"],
@@ -157,11 +157,11 @@ function loadState() {
   const demoPartSaleId = createId();
   return normalizeState({
     employees: [
-      { id: createId(), name: "Admin", username: "admin", password: "1234", mobile: "9876500001", idNo: "EMP-001", address: "JD Auto Sales, Main Road", joinDate: today(), role: "admin", active: true },
-      { id: createId(), name: "Accounts", username: "accounts", password: "1234", mobile: "9876500002", idNo: "EMP-002", address: "JD Auto Sales, Accounts Desk", joinDate: today(), role: "accounts", active: true },
-      { id: createId(), name: "Parts Manager", username: "parts", password: "1234", mobile: "9876500003", idNo: "EMP-003", address: "JD Auto Sales, Parts Counter", joinDate: today(), role: "parts_manager", active: true },
-      { id: createId(), name: "Sales Executive", username: "sales", password: "1234", mobile: "9876500004", idNo: "EMP-004", address: "JD Auto Sales, Sales Desk", joinDate: today(), role: "sales", active: true },
-      { id: createId(), name: "RTO Staff", username: "rto", password: "1234", mobile: "9876500005", idNo: "EMP-005", address: "JD Auto Sales, RTO Desk", joinDate: today(), role: "rto", active: true },
+      { id: createId(), name: "Admin", username: "admin", password: "4321", mobile: "9876500001", idNo: "EMP-001", address: "JD Auto Sales, Main Road", joinDate: today(), role: "admin", active: true },
+      { id: createId(), name: "Accounts", username: "accounts", password: "4321", mobile: "9876500002", idNo: "EMP-002", address: "JD Auto Sales, Accounts Desk", joinDate: today(), role: "accounts", active: true },
+      { id: createId(), name: "Parts Manager", username: "parts", password: "4321", mobile: "9876500003", idNo: "EMP-003", address: "JD Auto Sales, Parts Counter", joinDate: today(), role: "parts_manager", active: true },
+      { id: createId(), name: "Sales Executive", username: "sales", password: "4321", mobile: "9876500004", idNo: "EMP-004", address: "JD Auto Sales, Sales Desk", joinDate: today(), role: "sales", active: true },
+      { id: createId(), name: "RTO Staff", username: "rto", password: "4321", mobile: "9876500005", idNo: "EMP-005", address: "JD Auto Sales, RTO Desk", joinDate: today(), role: "rto", active: true },
     ],
     distributors: [
       { id: createId(), name: "TVS Main Distributor", mobile: "9876512345", total: 50000, paid: 30000, balance: 20000, notes: "Monthly stock payment demo" },
