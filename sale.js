@@ -322,6 +322,9 @@ function addBike(event) {
   }
   saveState();
   bikeForm.reset();
+   globalSearch.value = "";
+  bikeSearch.value = "";
+  syncBikeModelDetails();
   renderAll();
   openPanel("bikeListPanel");
   saleFrameNo.value = bike.frameNo;
