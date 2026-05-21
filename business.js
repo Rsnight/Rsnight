@@ -58,7 +58,7 @@ function bikeModelOptions() {
 }
 
 const pageAccess = {
-  "dashboard": ["admin", "accounts", "parts_manager", "sales", "rto","mechanics"],
+  "dashboard": ["admin", "accounts", "parts_manager", "sales", "rto"],
   "admin": ["admin"],
   "sales": ["admin", "accounts", "sales"],
   "rto": ["admin", "accounts", "rto", "sales"],
