@@ -248,6 +248,7 @@ function syncDistributorTotals(target = state) {
 }
 
 function saveState() {
+   serverSyncUpdatedAt = Date.now();
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
   queueServerSync();
 }
