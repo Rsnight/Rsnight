@@ -1,4 +1,4 @@
-const cacheName = "jd-tvs-business-v29";
+const cacheName = "jd-tvs-business-v30";
 const assets = [
   "./",
   "./login.html",
