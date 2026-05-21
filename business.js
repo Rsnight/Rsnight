@@ -75,6 +75,7 @@ const state = loadState();
 let toastTimer = null;
 let notificationTimer = null;
 let editingCustomerId = null;
+let customerModalMode = "entry";
 let deferredInstallPrompt = null;
 let serverSyncReady = false;
 let serverSyncTimer = null;
@@ -227,7 +228,12 @@ function normalizeState(data) {
   data.customers.forEach((customer) => {
     if (!customer.saleId) return;
     const sale = data.sales.find((item) => item.id === customer.saleId);
-    if (sale) customer.pending = Number(sale.pending || 0);
+    if (sale) {
+      customer.total = Number(sale.total || 0);
+      customer.paid = Number(sale.paid || 0);
+      customer.discount = Number(sale.discount || 0);
+      customer.pending = Number(sale.pending || 0);
+    }
   });
   data.distributors.forEach((item) => {
     item.name = item.name || "Distributor";
@@ -699,8 +705,8 @@ function editorConfigs() {
     bike: { title: "Update Bike", list: "bikes", fields: [
       ["model", "Bike Model", "text"], ["category", "Category", "text"], ["frameNo", "Frame No.", "text"], ["engineNo", "Engine No.", "text"], ["colour", "Colour", "text"], ["keyNo", "Key No.", "text"],
     ] },
-    sale: { title: "Update Sale", list: "sales", fields: [
-      ["customer", "Customer", "text"], ["mobile", "Mobile", "text"], ["invoice", "Invoice / VN", "text"], ["bike", "Bike", "text"], ["frameNo", "Frame No.", "text"], ["paymentType", "Payment Type", "select", ["Cash", "Finance"]], ["paid", "Received", "number"], ["pending", "Pending", "number"], ["discount", "Discount", "number"], ["date", "Date", "date"],
+    sale: { title: "Update Sale Details", list: "sales", fields: [
+      ["customer", "Customer", "text"], ["mobile", "Mobile", "text"], ["invoice", "Invoice / VN", "text"], ["bike", "Bike", "text"], ["frameNo", "Frame No.", "text"], ["paymentType", "Payment Type", "select", ["Cash", "Finance"]], ["date", "Date", "date"],
     ] },
     rto: { title: "Update RTO", list: "rto", fields: [
       ["customer", "Customer", "text"], ["invoice", "Invoice", "text"], ["frameNo", "Frame No.", "text"], ["rtoName", "RTO Name", "text"], ["registrationNo", "Registration No.", "text"], ["status", "Status", "select", ["Pending", "Completed"]],
@@ -768,6 +774,15 @@ function saveRecordEditor(event) {
   if (type === "distributor") {
     syncDistributorTotals();
   }
+  if (type === "sale") {
+    const customer = state.customers.find((item) => item.saleId === record.id || same(item.invoice, record.invoice) || same(item.bikeNo, record.frameNo));
+    if (customer) {
+      customer.name = record.customer || customer.name;
+      customer.mobile = record.mobile || customer.mobile;
+      customer.invoice = record.invoice || customer.invoice;
+      customer.bikeNo = record.frameNo || customer.bikeNo;
+    }
+  }
   if (type === "rto") record.status = record.rtoName && record.registrationNo ? "Completed" : record.status || "Pending";
   if (type === "insurance") record.status = insuranceDisplayStatus(record);
   saveState();
@@ -826,6 +841,7 @@ function bindCustomerModal() {
   qs("[data-open-customer]")?.addEventListener("click", () => openCustomerModal());
   qs("[data-close-customer]")?.addEventListener("click", () => {
     editingCustomerId = null;
+    customerModalMode = "entry";
     modal.hidden = true;
   });
   qs("#quickDate").value = today();
@@ -839,7 +855,14 @@ function bindCustomerModal() {
     event.preventDefault();
     if (!textValue("#quickInvoice") && !textValue("#quickBikeNo") && !textValue("#quickMobile")) return showToast("Mobile, Invoice/VN ya Bike/Reg no. me se ek fill kare.");
     if (numberValue("#quickPending") > 0 && !textValue("#quickMobile")) return showToast("Pending balance ke liye mobile number required hai.");
-    const existingCustomer = state.customers.find((item) => item.id === editingCustomerId) || findExistingCustomerForQuickEntry();
+    const isSaleReceive = customerModalMode === "receiveSale";
+    const isCustomerReceive = customerModalMode === "receiveCustomer" || customerModalMode === "receive";
+    const existingCustomer = isSaleReceive
+      ? null
+      : isCustomerReceive
+        ? state.customers.find((item) => item.id === editingCustomerId)
+        : state.customers.find((item) => item.id === editingCustomerId) || findExistingCustomerForQuickEntry();
+    const isEditMode = customerModalMode === "edit";
     const totalAmount = numberValue("#quickTotal");
     const pendingBefore = existingCustomer ? Number(existingCustomer.pending || 0) : (totalAmount || numberValue("#quickPending"));
     const receivedNow = numberValue("#quickPaid");
@@ -876,49 +899,90 @@ function bindCustomerModal() {
       return;
     }
     const serviceCharge = partsAmount > 0 ? Math.max(totalAmount - partsAmount, 0) : Math.max(receivedNow + discountNow - pendingBefore, 0);
+    const saleMatch = isCustomerReceive ? null : existingCustomer?.saleId
+      ? state.sales.find((sale) => sale.id === existingCustomer.saleId)
+      : state.sales.find((sale) => same(sale.invoice, textValue("#quickInvoice")) || same(sale.mobile, textValue("#quickMobile")) || same(sale.frameNo, textValue("#quickBikeNo")) || same(sale.registrationNo, textValue("#quickBikeNo")));
+    if (isSaleReceive) {
+      if (!saleMatch) return showToast("Sale record nahi mila.");
+      saleMatch.paid = Number(saleMatch.paid || 0) + appliedPayment;
+      saleMatch.discount = Number(saleMatch.discount || 0) + discountNow;
+      saleMatch.pending = Math.max(Number(saleMatch.pending || 0) - appliedCredit, 0);
+      state.paymentLogs.push({
+        id: createId(),
+        source: "Sale",
+        date: textValue("#quickDate") || today(),
+        name: saleMatch.customer || textValue("#quickCustomerName"),
+        mobile: saleMatch.mobile || textValue("#quickMobile"),
+        invoice: saleMatch.invoice || textValue("#quickInvoice"),
+        bikeNo: saleMatch.frameNo || textValue("#quickBikeNo"),
+        total: Number(saleMatch.total || 0),
+        partsAmount: 0,
+        extra: serviceCharge,
+        paid: appliedPayment,
+        discount: discountNow,
+        pending: saleMatch.pending,
+      });
+      editingCustomerId = null;
+      customerModalMode = "entry";
+      saveState();
+      form.reset();
+      qs("#quickDate").value = today();
+      renderOldCustomerNotice();
+      renderPage();
+      showToast("Sale payment received.");
+      return;
+    }
     const record = {
       id: existingCustomer?.id || editingCustomerId || createId(),
       name: textValue("#quickCustomerName"),
       mobile: textValue("#quickMobile"),
       invoice: textValue("#quickInvoice"),
       bikeNo: textValue("#quickBikeNo"),
-      total: totalAmount || Number(existingCustomer?.total || 0),
+      total: isEditMode ? totalAmount : Number(existingCustomer?.total || saleMatch?.total || totalAmount || 0),
       partsAmount,
-      paid: existingCustomer && appliedPayment > 0 ? Number(existingCustomer.paid || 0) + appliedPayment : appliedPayment,
-      pending: existingCustomer && appliedCredit > 0 ? Math.max(Number(existingCustomer.pending || 0) - appliedCredit, 0) : numberValue("#quickPending"),
-      discount: Number(existingCustomer?.discount || 0) + discountNow,
-      extra: Number(existingCustomer?.extra || 0) + serviceCharge,
+      paid: isEditMode ? receivedNow : (existingCustomer && appliedPayment > 0 ? Number(existingCustomer.paid || 0) + appliedPayment : appliedPayment),
+      pending: isEditMode ? numberValue("#quickPending") : (existingCustomer && appliedCredit > 0 ? Math.max(Number(existingCustomer.pending || 0) - appliedCredit, 0) : numberValue("#quickPending")),
+      discount: isEditMode ? discountNow : Number(existingCustomer?.discount || 0) + discountNow,
+      extra: isEditMode ? numberValue("#quickExtra") : Number(existingCustomer?.extra || 0) + serviceCharge,
       date: textValue("#quickDate") || today(),
     };
     const index = state.customers.findIndex((item) => item.id === record.id);
     if (index >= 0) state.customers[index] = { ...state.customers[index], ...record };
     else state.customers.push(record);
-    const saleMatch = existingCustomer?.saleId
-      ? state.sales.find((sale) => sale.id === existingCustomer.saleId)
-      : state.sales.find((sale) => same(sale.invoice, record.invoice) || same(sale.mobile, record.mobile) || same(sale.frameNo, record.bikeNo) || same(sale.registrationNo, record.bikeNo));
-    if (saleMatch && appliedCredit > 0) {
-      saleMatch.paid = Number(saleMatch.paid || 0) + appliedPayment;
-      saleMatch.discount = Number(saleMatch.discount || 0) + discountNow;
-      saleMatch.pending = Math.max(Number(saleMatch.pending || 0) - appliedCredit, 0);
+    if (saleMatch && (isEditMode || appliedCredit > 0)) {
+      if (isEditMode) {
+        saleMatch.total = Number(record.total || saleMatch.total || 0);
+        saleMatch.paid = record.paid;
+        saleMatch.discount = record.discount;
+        saleMatch.pending = record.pending;
+      } else {
+        saleMatch.paid = Number(saleMatch.paid || 0) + appliedPayment;
+        saleMatch.discount = Number(saleMatch.discount || 0) + discountNow;
+        saleMatch.pending = Math.max(Number(saleMatch.pending || 0) - appliedCredit, 0);
+      }
       record.pending = saleMatch.pending;
     }
     if (index >= 0) state.customers[index] = { ...state.customers[index], ...record };
-    state.paymentLogs.push({
-      id: createId(),
-      customerId: record.id,
-      date: record.date,
-      name: record.name,
-      mobile: record.mobile,
-      invoice: record.invoice,
-      bikeNo: record.bikeNo,
-      total: totalAmount,
-      partsAmount,
-      extra: serviceCharge,
-      paid: appliedPayment,
-      discount: discountNow,
-      pending: record.pending,
-    });
+    if (!isEditMode) {
+      state.paymentLogs.push({
+        id: createId(),
+        source: "Customer",
+        customerId: record.id,
+        date: record.date,
+        name: record.name,
+        mobile: record.mobile,
+        invoice: record.invoice,
+        bikeNo: record.bikeNo,
+        total: record.total,
+        partsAmount,
+        extra: serviceCharge,
+        paid: appliedPayment,
+        discount: discountNow,
+        pending: record.pending,
+      });
+    }
     editingCustomerId = null;
+    customerModalMode = "entry";
     saveState();
     form.reset();
     qs("#quickDate").value = today();
@@ -931,13 +995,14 @@ function bindCustomerModal() {
 function openCustomerModal(prefill = {}) {
   const modal = qs("#customerModal");
   editingCustomerId = prefill.id || null;
+  customerModalMode = prefill.mode || (prefill.id ? "edit" : "entry");
   modal.hidden = false;
   qs("#quickCustomerName").value = prefill.name || "";
   qs("#quickMobile").value = prefill.mobile || "";
   qs("#quickInvoice").value = prefill.invoice || "";
   qs("#quickBikeNo").value = prefill.bikeNo || "";
   qs("#quickPartsAmount").value = prefill.partsAmount || 0;
-  qs("#quickTotal").value = prefill.total || prefill.pending || 0;
+  qs("#quickTotal").value = prefill.total || Number(prefill.paid || 0) + Number(prefill.pending || 0) + Number(prefill.discount || 0);
   qs("#quickPaid").value = prefill.paid || 0;
   qs("#quickDiscount").value = prefill.discount || 0;
   qs("#quickPending").value = prefill.pending || 0;
@@ -1108,6 +1173,34 @@ function applyPartsPayment(reference, paidAmount, discountAmount = 0) {
     sale.discount = Number(sale.discount || 0) + discount;
     sale.pending = Math.max(pending, 0);
   });
+}
+
+function upsertPaymentListRow(record, { source = "Customer", partsAmount = 0, extra = 0, received = 0, discountReceived = 0 } = {}) {
+  const total = Number(record.total || 0) || Number(record.paid || 0) + Number(record.pending || 0) + Number(record.discount || 0);
+  const existing = state.paymentLogs.find((item) =>
+    source !== "Parts" &&
+    (item.customerId === record.id || (record.invoice && same(item.invoice, record.invoice) && (!record.bikeNo || same(item.bikeNo, record.bikeNo))))
+  );
+  const row = {
+    id: existing?.id || createId(),
+    source,
+    customerId: record.id,
+    date: record.date || today(),
+    name: record.name || record.customer || "",
+    mobile: record.mobile || "",
+    invoice: record.invoice || "",
+    bikeNo: record.bikeNo || record.frameNo || "",
+    total,
+    partsAmount,
+    extra,
+    paid: Number(record.paid || 0),
+    discount: Number(record.discount || 0),
+    pending: Number(record.pending || 0),
+    received,
+    discountReceived,
+  };
+  if (existing) Object.assign(existing, row);
+  else state.paymentLogs.push(row);
 }
 
 function statCards() {
@@ -1332,13 +1425,13 @@ function handleNotificationAction(event) {
   }
   if (type === "payment-sale") {
     const item = state.sales.find((row) => row.id === id);
-    if (item) openCustomerModal({ name: item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.frameNo || item.registrationNo, paid: 0, pending: item.pending });
+    if (item) openCustomerModal({ mode: "receiveSale", name: item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.frameNo || item.registrationNo, paid: 0, pending: item.pending });
     qs("#notificationPanel").hidden = true;
     return;
   }
   if (type === "payment-customer") {
     const item = state.customers.find((row) => row.id === id);
-    if (item) openCustomerModal({ id: item.id, name: item.name, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo, paid: 0, pending: item.pending });
+    if (item) openCustomerModal({ mode: "receiveCustomer", id: item.id, name: item.name, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo, paid: 0, pending: item.pending });
     qs("#notificationPanel").hidden = true;
     return;
   }
@@ -1825,7 +1918,24 @@ function saveSale(event) {
     date: textValue("#saleDate") || today(),
   };
   state.sales.push(sale);
-  state.customers.push({ id: createId(), saleId: sale.id, name: sale.customer, mobile: sale.mobile, invoice: sale.invoice, bikeNo: sale.frameNo, paid: sale.paid, pending: sale.pending, date: sale.date });
+  const customer = { id: createId(), saleId: sale.id, name: sale.customer, mobile: sale.mobile, invoice: sale.invoice, bikeNo: sale.frameNo, total: sale.total, paid: sale.paid, pending: sale.pending, discount: sale.discount, date: sale.date };
+  state.customers.push(customer);
+  state.paymentLogs.push({
+    id: createId(),
+    source: "Sale",
+    customerId: customer.id,
+    date: sale.date,
+    name: sale.customer,
+    mobile: sale.mobile,
+    invoice: sale.invoice,
+    bikeNo: sale.frameNo,
+    total: sale.total,
+    partsAmount: 0,
+    extra: 0,
+    paid: sale.paid,
+    discount: sale.discount,
+    pending: sale.pending,
+  });
   state.rto.push({ id: createId(), saleId: sale.id, customer: sale.customer, mobile: sale.mobile, invoice: sale.invoice, frameNo: sale.frameNo, status: "Pending", registrationNo: "", date: sale.date });
   state.insurance.push({ id: createId(), saleId: sale.id, customer: sale.customer, mobile: sale.mobile, invoice: sale.invoice, frameNo: sale.frameNo, status: "Pending", company: "", policyNo: "", expenses: 0, expiryDate: "", date: sale.date });
   state.bikes = state.bikes.filter((item) => item.id !== bike.id);
@@ -1846,7 +1956,7 @@ function renderSalesData() {
 function renderSalesRows() {
   const query = normalize(qs("#salesSearch")?.value);
   const sales = visibleRowsForUser(state.sales).filter((sale) => !query || Object.values(sale).join(" ").toLowerCase().includes(query));
-  qs("#salesRows").innerHTML = sales.length ? sales.slice().reverse().map((sale) => `<tr><td>${sale.date}</td><td>${sale.customer}</td><td>${sale.mobile}</td><td>${sale.bike}</td><td>${sale.frameNo}</td><td>${sale.paymentType || "Cash"}</td><td>${sale.financeCompany || "-"}</td><td>${money(sale.total)}</td><td>${money(sale.paid)}</td><td class="${sale.pending ? "due" : "ok"}">${money(sale.pending)}</td><td>${money(sale.discount)}</td><td><button class="soft-btn" data-open-customer-for="${sale.id}">Payment</button></td></tr>`).join("") : `<tr><td class="empty-row" colspan="12">No sales records.</td></tr>`;
+  qs("#salesRows").innerHTML = sales.length ? sales.slice().reverse().map((sale) => `<tr><td>${sale.date}</td><td>${sale.customer}</td><td>${sale.mobile}</td><td>${sale.bike}</td><td>${sale.frameNo}</td><td>${sale.paymentType || "Cash"}</td><td>${sale.financeCompany || "-"}</td><td>${money(sale.total)}</td><td>${money(sale.paid)}</td><td class="${sale.pending ? "due" : "ok"}">${money(sale.pending)}</td><td>${money(sale.discount)}</td><td><button class="soft-btn" data-open-customer-for="${sale.id}">Receive</button></td></tr>`).join("") : `<tr><td class="empty-row" colspan="12">No sales records.</td></tr>`;
   applyTablePagination();
 }
 
@@ -1905,7 +2015,7 @@ function renderCustomerRows() {
   const query = normalize(qs("#customerSearch")?.value);
   const rows = visibleRowsForUser(state.customers).filter((item) => !query || Object.values(item).join(" ").toLowerCase().includes(query));
   const canDelete = currentUser()?.role === "admin";
-  qs("#customerRows").innerHTML = rows.length ? rows.slice().reverse().map((item) => `<tr><td>${item.date}</td><td>${item.name}</td><td>${item.mobile}</td><td>${item.invoice}</td><td>${item.bikeNo || "-"}</td><td>${money(item.paid)}</td><td class="${item.pending ? "due" : "ok"}">${money(item.pending)}</td><td><div class="row-actions"><button class="edit-btn" data-edit-customer="${item.id}">Edit</button>${canDelete ? `<button class="delete-btn" data-delete-customer="${item.id}">Delete</button>` : ""}</div></td></tr>`).join("") : `<tr><td class="empty-row" colspan="8">No customer records.</td></tr>`;
+  qs("#customerRows").innerHTML = rows.length ? rows.slice().reverse().map((item) => `<tr><td>${item.date}</td><td>${item.name}</td><td>${item.mobile}</td><td>${item.invoice}</td><td>${item.bikeNo || "-"}</td><td>${money(item.paid)}</td><td class="${item.pending ? "due" : "ok"}">${money(item.pending)}</td><td><div class="row-actions"><button class="soft-btn" data-receive-pending="Customer" data-id="${item.id}">Receive</button>${canDelete ? `<button class="delete-btn" data-delete-customer="${item.id}">Delete</button>` : ""}</div></td></tr>`).join("") : `<tr><td class="empty-row" colspan="8">No customer records.</td></tr>`;
   applyTablePagination();
 }
 
@@ -2073,11 +2183,11 @@ function renderListTab(type) {
   }
   if (type === "customer") {
     const rows = applyListSearch(visibleRowsForUser(state.customers));
-    output.innerHTML = wrapList(`<table><thead><tr><th>Date</th><th>Name</th><th>Mobile</th><th>Invoice</th><th>Bike / Frame</th><th>Paid</th><th>Pending</th><th>Action</th></tr></thead><tbody>${rows.length ? rows.map((item) => `<tr><td>${item.date || "-"}</td><td>${item.name || item.customer || "-"}</td><td>${item.mobile || "-"}</td><td>${item.invoice || "-"}</td><td>${item.bikeNo || item.frameNo || "-"}</td><td>${money(item.paid)}</td><td class="${item.pending ? "due" : "ok"}">${money(item.pending)}</td><td>${actionMenu([`<button class="edit-btn" data-edit-customer="${item.id}">Update</button>`, `<button class="soft-btn" data-receive-pending="Customer" data-id="${item.id}">Receive</button>`, deleteAction("delete-customer", item.id)])}</td></tr>`).join("") : empty(8, "No customer records.")}</tbody></table>`);
+    output.innerHTML = wrapList(`<table><thead><tr><th>Date</th><th>Name</th><th>Mobile</th><th>Invoice</th><th>Bike / Frame</th><th>Paid</th><th>Pending</th><th>Action</th></tr></thead><tbody>${rows.length ? rows.map((item) => `<tr><td>${item.date || "-"}</td><td>${item.name || item.customer || "-"}</td><td>${item.mobile || "-"}</td><td>${item.invoice || "-"}</td><td>${item.bikeNo || item.frameNo || "-"}</td><td>${money(item.paid)}</td><td class="${item.pending ? "due" : "ok"}">${money(item.pending)}</td><td>${actionMenu([`<button class="soft-btn" data-receive-pending="Customer" data-id="${item.id}">Receive</button>`, deleteAction("delete-customer", item.id)])}</td></tr>`).join("") : empty(8, "No customer records.")}</tbody></table>`);
   }
   if (type === "sales") {
     const rows = applyListSearch(visibleRowsForUser(state.sales));
-    output.innerHTML = wrapList(`<table><thead><tr><th>Date</th><th>Customer</th><th>Mobile</th><th>Bike</th><th>Frame</th><th>Payment</th><th>Paid</th><th>Pending</th><th>Action</th></tr></thead><tbody>${rows.length ? rows.map((sale) => `<tr><td>${sale.date || "-"}</td><td>${sale.customer || "-"}</td><td>${sale.mobile || "-"}</td><td>${sale.bike || "-"}</td><td>${sale.frameNo || "-"}</td><td>${sale.paymentType || "-"}</td><td>${money(sale.paid)}</td><td class="${sale.pending ? "due" : "ok"}">${money(sale.pending)}</td><td>${actionMenu([`<button class="edit-btn" data-record-edit="sale" data-id="${sale.id}">Update Sale</button>`, `<button class="soft-btn" data-open-customer-for="${sale.id}">Update Payment</button>`, deleteAction("delete-sale", sale.id)])}</td></tr>`).join("") : empty(9, "No sales records.")}</tbody></table>`);
+    output.innerHTML = wrapList(`<table><thead><tr><th>Date</th><th>Customer</th><th>Mobile</th><th>Bike</th><th>Frame</th><th>Payment</th><th>Paid</th><th>Pending</th><th>Action</th></tr></thead><tbody>${rows.length ? rows.map((sale) => `<tr><td>${sale.date || "-"}</td><td>${sale.customer || "-"}</td><td>${sale.mobile || "-"}</td><td>${sale.bike || "-"}</td><td>${sale.frameNo || "-"}</td><td>${sale.paymentType || "-"}</td><td>${money(sale.paid)}</td><td class="${sale.pending ? "due" : "ok"}">${money(sale.pending)}</td><td>${actionMenu([`<button class="edit-btn" data-record-edit="sale" data-id="${sale.id}">Update Sale</button>`, `<button class="soft-btn" data-open-customer-for="${sale.id}">Receive</button>`, deleteAction("delete-sale", sale.id)])}</td></tr>`).join("") : empty(9, "No sales records.")}</tbody></table>`);
   }
   if (type === "rto") {
     const rows = applyListSearch(visibleRowsForUser(state.rto));
@@ -2098,7 +2208,7 @@ function renderListTab(type) {
     const paymentRows = state.paymentLogs.length ? state.paymentLogs.slice().reverse() : visibleRowsForUser(state.customers).slice().reverse();
     const rows = applyListSearch(paymentRows);
     const paymentDelete = (id) => canDelete && state.paymentLogs.length ? `<button class="delete-btn" data-delete-payment-log="${id}">Delete</button>` : "";
-    output.innerHTML = wrapList(`<table><thead><tr><th>Date</th><th>Name</th><th>Mobile</th><th>Invoice</th><th>Reg / Frame</th><th>Total Amount</th><th>Parts Amount</th><th>Service Charge</th><th>Received</th><th>Discount</th><th>Pending</th><th>Action</th></tr></thead><tbody>${rows.length ? rows.map((item) => `<tr><td>${item.date || "-"}</td><td>${item.name || item.customer || "-"}</td><td>${item.mobile || "-"}</td><td>${item.invoice || "-"}</td><td>${item.bikeNo || item.frameNo || "-"}</td><td>${money(item.total || Number(item.paid || 0) + Number(item.pending || 0) + Number(item.discount || 0))}</td><td>${money(item.partsAmount || 0)}</td><td>${money(item.extra || 0)}</td><td>${money(item.paid)}</td><td>${money(item.discount || 0)}</td><td class="${item.pending ? "due" : "ok"}">${money(item.pending)}</td><td>${actionMenu([`<button class="soft-btn" data-receive-pending="Customer" data-id="${item.customerId || item.id}">Receive</button>`, `<button class="edit-btn" data-edit-customer="${item.customerId || item.id}">Update</button>`, paymentDelete(item.id)])}</td></tr>`).join("") : empty(12, "No payment records.")}</tbody></table>`);
+    output.innerHTML = wrapList(`<table><thead><tr><th>Date</th><th>Name</th><th>Mobile</th><th>Invoice</th><th>Reg / Frame</th><th>Total Amount</th><th>Parts Amount</th><th>Service Charge</th><th>Received</th><th>Discount</th><th>Pending</th><th>Action</th></tr></thead><tbody>${rows.length ? rows.map((item) => `<tr><td>${item.date || "-"}</td><td>${item.name || item.customer || "-"}</td><td>${item.mobile || "-"}</td><td>${item.invoice || "-"}</td><td>${item.bikeNo || item.frameNo || "-"}</td><td>${money(item.total || Number(item.paid || 0) + Number(item.pending || 0) + Number(item.discount || 0))}</td><td>${money(item.partsAmount || 0)}</td><td>${money(item.extra || 0)}</td><td>${money(item.paid)}</td><td>${money(item.discount || 0)}</td><td class="${item.pending ? "due" : "ok"}">${money(item.pending)}</td><td>${actionMenu([paymentDelete(item.id)])}</td></tr>`).join("") : empty(12, "No payment records.")}</tbody></table>`);
   }
   qs("#listSearch")?.addEventListener("input", () => renderListTab(type));
   if (searchable && query && qs("#listSearch")) {
@@ -3557,16 +3667,16 @@ document.addEventListener("click", (event) => {
     const source = receivePending.dataset.receivePending;
     const id = receivePending.dataset.id;
     const item = source === "Sale" ? state.sales.find((sale) => sale.id === id) : state.customers.find((customer) => customer.id === id);
-    if (item) openCustomerModal({ id: source === "Customer" ? item.id : "", name: item.name || item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo || item.frameNo, total: item.pending, paid: 0, pending: item.pending });
+    if (item) openCustomerModal({ mode: source === "Sale" ? "receiveSale" : "receiveCustomer", id: source === "Customer" ? item.id : "", name: item.name || item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo || item.frameNo, total: item.pending, paid: 0, pending: item.pending });
   }
   if (fillPendingMatch) {
     const item = pendingReferenceMatches()[Number(fillPendingMatch.dataset.fillPendingMatch)];
-    if (item) openCustomerModal({ id: item.matchSource === "Customer" ? item.id : "", name: item.name || item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo || item.frameNo || item.registrationNo, total: item.pending, paid: 0, pending: item.pending });
+    if (item) openCustomerModal({ mode: item.matchSource === "Sale" ? "receiveSale" : "receiveCustomer", id: item.matchSource === "Customer" ? item.id : "", name: item.name || item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo || item.frameNo || item.registrationNo, total: item.pending, paid: 0, pending: item.pending });
   }
   if (fillOldPendingMatch) {
     const item = pendingReferenceMatches()[Number(fillOldPendingMatch.dataset.fillOldPendingMatch)];
     const oldPending = Number(fillOldPendingMatch.dataset.oldPending || item?.pending || 0);
-    if (item) openCustomerModal({ id: item.matchSource === "Customer" ? item.id : "", name: item.name || item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo || item.frameNo || item.registrationNo, partsAmount: 0, total: oldPending, paid: 0, pending: oldPending });
+    if (item) openCustomerModal({ mode: item.matchSource === "Sale" ? "receiveSale" : "receiveCustomer", id: item.matchSource === "Customer" ? item.id : "", name: item.name || item.customer, mobile: item.mobile, invoice: item.invoice, bikeNo: item.bikeNo || item.frameNo || item.registrationNo, partsAmount: 0, total: oldPending, paid: 0, pending: oldPending });
   }
   if (fillPartsPayment) {
     const partsAmount = numberValue("#quickPartsAmount");
@@ -3680,7 +3790,20 @@ document.addEventListener("click", (event) => {
   }
   if (customerFor) {
     const sale = state.sales.find((item) => item.id === customerFor.dataset.openCustomerFor);
-    openCustomerModal({ name: sale.customer, mobile: sale.mobile, invoice: sale.invoice, bikeNo: sale.frameNo, pending: sale.pending });
+    if (!sale) return showToast("Sale record nahi mila.");
+    const customer = state.customers.find((item) => item.saleId === sale.id || same(item.invoice, sale.invoice) || same(item.bikeNo, sale.frameNo));
+    openCustomerModal({
+      mode: "receiveSale",
+      id: customer?.id || "",
+      name: sale.customer,
+      mobile: sale.mobile,
+      invoice: sale.invoice,
+      bikeNo: sale.frameNo,
+      total: sale.pending,
+      paid: 0,
+      discount: 0,
+      pending: sale.pending,
+    });
   }
 });
 
